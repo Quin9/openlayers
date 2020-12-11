@@ -16,6 +16,9 @@ Vue.use(ElementUI);
 
 Vue.config.productionTip = false
 
+import fu from './components/fu.vue'
+Vue.component("fu", fu);
+
 
 
 new Vue({

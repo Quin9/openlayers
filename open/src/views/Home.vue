@@ -8,6 +8,7 @@
       <el-option value="None">None</el-option>
     </el-select>
     <el-checkbox v-model="xyz">XYZ图层</el-checkbox>
+    <el-checkbox v-model="baidu">BAIDU图层</el-checkbox>
     <div id="map"></div>
   </div>
 </template>
@@ -21,6 +22,8 @@ export default {
       draw: null,
       xyz: false,
       xyzMap: null,
+      baiduMap: null,
+      baidu: null,
     };
   },
   mounted() {
@@ -41,6 +44,53 @@ export default {
           url:
             "http://map.geoq.cn/ArcGIS/rest/services/ChinaOnlineStreetPurplishBlue/MapServer/tile/{z}/{y}/{x}",
         }),
+      });
+
+      // //百度图层 dlvS5rROfU9xyCqGQWNvQBHBtdKvTAvT
+      let projection = ol.proj.get("EPSG:3857");
+      //分辨率
+      let resolutions = [];
+      for (var i = 0; i < 19; i++) {
+        resolutions[i] = Math.pow(2, 18 - i);
+      }
+      let tilegrid = new ol.tilegrid.TileGrid({
+        origin: [0, 0],
+        resolutions: resolutions,
+      });
+      //拼接百度地图出图地址
+      let baidu_source = new ol.source.TileImage({
+        //设置坐标参考系
+        projection: projection,
+        //设置分辨率
+        tileGrid: tilegrid,
+        //出图基地址
+        tileUrlFunction: function (tileCoord, pixelRatio, proj) {
+          if (!tileCoord) {
+            return "";
+          }
+          var z = tileCoord[0];
+          var x = tileCoord[1];
+          var y = tileCoord[2];
+
+          if (x < 0) {
+            x = "M" + -x;
+          }
+          if (y < 0) {
+            y = "M" + -y;
+          }
+          return (
+            "http://online3.map.bdimg.com/onlinelabel/?qt=tile&x=" +
+            x +
+            "&y=" +
+            y +
+            "&z=" +
+            z +
+            "&styles=pl&udt=20151021&scaler=1&p=1"
+          );
+        },
+      });
+      this.baiduMap = new ol.layer.Tile({
+        source: baidu_source,
       });
 
       //矢量图层
@@ -89,7 +139,7 @@ export default {
       });
 
       this.map = new ol.Map({
-        layers: [raster, this.xyzMap],
+        layers: [raster, this.baiduMap, this.xyzMap],
         view: new ol.View({
           center: [0, 0],
           zoom: 4,
@@ -100,7 +150,10 @@ export default {
       });
       //修改图层 实现画画
       vector.setMap(this.map);
-      this.map.removeLayer(this.map.getLayers().a[1]);
+
+      //初始化时移除 xyz 视图层
+      this.map.removeLayer(this.xyzMap);
+      this.map.removeLayer(this.baiduMap);
     },
     add() {
       let ol = this.$ol;
@@ -122,8 +175,13 @@ export default {
     },
     xyz() {
       this.xyz == false
-        ? this.map.removeLayer(this.map.getLayers().a[1])
+        ? this.map.removeLayer(this.xyzMap)
         : this.map.addLayer(this.xyzMap);
+    },
+    baidu() {
+      this.baidu == false
+        ? this.map.removeLayer(this.baiduMap)
+        : this.map.addLayer(this.baiduMap);
     },
   },
 };
