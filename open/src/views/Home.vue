@@ -7,6 +7,7 @@
       <el-option value="Circle">Circle</el-option>
       <el-option value="None">None</el-option>
     </el-select>
+    <el-checkbox v-model="xyz">XYZ图层</el-checkbox>
     <div id="map"></div>
   </div>
 </template>
@@ -17,7 +18,9 @@ export default {
       map: null,
       source: null,
       se: "None",
-      draw: null
+      draw: null,
+      xyz: false,
+      xyzMap: null,
     };
   },
   mounted() {
@@ -29,8 +32,17 @@ export default {
 
       //瓦片图层
       let raster = new ol.layer.Tile({
-        source: new ol.source.OSM()
+        source: new ol.source.OSM(),
       });
+
+      //瓦片图层xyz数据
+      this.xyzMap = new ol.layer.Tile({
+        source: new ol.source.XYZ({
+          url:
+            "http://map.geoq.cn/ArcGIS/rest/services/ChinaOnlineStreetPurplishBlue/MapServer/tile/{z}/{y}/{x}",
+        }),
+      });
+
       //矢量图层
 
       this.source = new ol.source.Vector({ wrapX: false });
@@ -39,19 +51,19 @@ export default {
         source: this.source,
         style: new ol.style.Style({
           fill: new ol.style.Fill({
-            color: "rgba(255, 255, 255, 0.2)"
+            color: "rgba(255, 255, 255, 0.2)",
           }),
           stroke: new ol.style.Stroke({
             color: "#ffcc33",
-            width: 2
+            width: 2,
           }),
           image: new ol.style.Circle({
             radius: 7,
             fill: new ol.style.Fill({
-              color: "#00f"
-            })
-          })
-        })
+              color: "#00f",
+            }),
+          }),
+        }),
       });
 
       //创建鹰眼控件
@@ -60,30 +72,35 @@ export default {
         layers: [
           new ol.layer.Tile({
             source: new ol.source.OSM({
-              url: "https://{a-c}.tile.thunderforest.com/cycle/{z}/{x}/{y}.png"
-            })
-          })
+              url: "https://{a-c}.tile.thunderforest.com/cycle/{z}/{x}/{y}.png",
+            }),
+          }),
         ],
         collapseLabel: "\u00BB",
         //鹰眼控件折叠时功能按钮上的标识（网页的JS的字符编码）
         label: "\u00AB",
         //初始为展开显示方式
-        collapsed: false
+        collapsed: true,
+      });
+
+      //比例尺控件
+      let scaleLineControl = new ol.control.ScaleLine({
+        units: "metric",
       });
 
       this.map = new ol.Map({
-        layers: [raster],
+        layers: [raster, this.xyzMap],
         view: new ol.View({
           center: [0, 0],
-          zoom: 4
+          zoom: 4,
         }),
         target: "map",
-        //添加组件
-        // control: new ol.control.OverviewMap()
-        controls: ol.control.defaults().extend([overviewmap])
+        //添加组件                                鹰眼控件       比例尺控件
+        controls: ol.control.defaults().extend([overviewmap, scaleLineControl]),
       });
       //修改图层 实现画画
       vector.setMap(this.map);
+      this.map.removeLayer(this.map.getLayers().a[1]);
     },
     add() {
       let ol = this.$ol;
@@ -92,18 +109,23 @@ export default {
       if (va !== "None") {
         this.draw = new ol.interaction.Draw({
           source: this.source,
-          type: /** @type {ol.geom.GeometryType} */ (this.se)
+          type: /** @type {ol.geom.GeometryType} */ (this.se),
         });
         this.map.addInteraction(this.draw);
       }
-    }
+    },
   },
   watch: {
     se() {
       this.map.removeInteraction(this.draw);
       this.add();
-    }
-  }
+    },
+    xyz() {
+      this.xyz == false
+        ? this.map.removeLayer(this.map.getLayers().a[1])
+        : this.map.addLayer(this.xyzMap);
+    },
+  },
 };
 </script>
 <style>
@@ -147,4 +169,6 @@ export default {
 .ol-custom-overviewmap .ol-overviewmap-box {
   border: 2px solid red;
 }
+
+/* 比例尺 */
 </style>
